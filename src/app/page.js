@@ -3,14 +3,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import styles from './FloatingBar.module.css'
-import OpenAI from 'openai'
 import getDemoPages from './demoPagesData';
 import DevTools from './DevTools';
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true
-});
+import { generateHtml } from './openaiService';
 
 export default function Home() {
   const [isExpanded, setIsExpanded] = useState(false)
@@ -29,33 +24,6 @@ export default function Home() {
     }, 300)
   }
 
-  const generateHtml = async (prompt) => {
-    const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
-
-    if (useMockData) {
-      // Use mock data
-      const demoPages = getDemoPages();
-      const randomPage = demoPages[Math.floor(Math.random() * demoPages.length)];
-      return randomPage;
-    } else {
-      // Use real OpenAI API
-      try {
-        const response = await openai.chat.completions.create({
-          model: "gpt-3.5-turbo",
-          messages: [
-            { role: "system", content: "You are an HTML generator. Create a simple HTML page based on the user's prompt." },
-            { role: "user", content: prompt }
-          ],
-          max_tokens: 1000
-        });
-        return response.choices[0].message.content;
-      } catch (error) {
-        console.error('Error generating HTML:', error);
-        return null;
-      }
-    }
-  }
-
   const handleSubmit = async () => {
     if (!inputText.trim()) {
       alert('Please enter content before submitting');
@@ -63,7 +31,18 @@ export default function Home() {
     }
     setIsLoading(true)
     const prompt = `Create an HTML page about: ${inputText}. Include some basic CSS styles.`
-    const generatedHtml = await generateHtml(prompt)
+    const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
+
+    let generatedHtml;
+    if (useMockData) {
+      // Use mock data
+      const demoPages = getDemoPages();
+      generatedHtml = demoPages[Math.floor(Math.random() * demoPages.length)];
+    } else {
+      // Use real OpenAI API
+      generatedHtml = await generateHtml(prompt);
+    }
+
     if (generatedHtml) {
       setShowContent(false)
       setTimeout(() => {
@@ -101,6 +80,10 @@ export default function Home() {
       }
     }
   }, [backgroundHtml])
+
+  const handleHtmlChange = (newHtml) => {
+    setBackgroundHtml(newHtml);
+  };
 
   return (
     <>
@@ -193,7 +176,7 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-      {backgroundHtml && <DevTools />}
+      {backgroundHtml && <DevTools onHtmlChange={handleHtmlChange} />}
     </>
   )
 }
