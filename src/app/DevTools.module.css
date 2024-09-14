@@ -1,0 +1,38 @@
+.devTools {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+}
+
+.devToolsButton {
+  background-color: #4CAF50;
+  border: none;
+  color: white;
+  padding: 15px 32px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 16px;
+  margin: 4px 2px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.overlay {
+  position: fixed;
+  border: 2px solid blue;
+  background-color: rgba(0, 0, 255, 0.1);
+  pointer-events: none;
+  display: none;
+  z-index: 9999;
+}
+
+.elementInfo {
+  background-color: white;
+  border: 1px solid #ccc;
+  padding: 10px;
+  margin-top: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}

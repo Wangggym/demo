@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import styles from './FloatingBar.module.css'
 import OpenAI from 'openai'
+import getDemoPages from './demoPagesData';
+import DevTools from './DevTools';
 
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
@@ -28,18 +30,29 @@ export default function Home() {
   }
 
   const generateHtml = async (prompt) => {
-    try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-3.5-turbo",
-        messages: [
-          {role: "system", content: "You are an HTML generator. Create a simple HTML page based on the user's prompt."},
-          {role: "user", content: prompt}
-        ],
-        max_tokens: 1000
-      });
-      return response.choices[0].message.content;
-    } catch (error) {
-      return null;
+    const useMockData = process.env.NEXT_PUBLIC_USE_MOCK_DATA === 'true';
+
+    if (useMockData) {
+      // Use mock data
+      const demoPages = getDemoPages();
+      const randomPage = demoPages[Math.floor(Math.random() * demoPages.length)];
+      return randomPage;
+    } else {
+      // Use real OpenAI API
+      try {
+        const response = await openai.chat.completions.create({
+          model: "gpt-3.5-turbo",
+          messages: [
+            { role: "system", content: "You are an HTML generator. Create a simple HTML page based on the user's prompt." },
+            { role: "user", content: prompt }
+          ],
+          max_tokens: 1000
+        });
+        return response.choices[0].message.content;
+      } catch (error) {
+        console.error('Error generating HTML:', error);
+        return null;
+      }
     }
   }
 
@@ -90,94 +103,97 @@ export default function Home() {
   }, [backgroundHtml])
 
   return (
-    <AnimatePresence>
-      {showContent && (
-        <motion.div
-          className={styles.container}
-          initial={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-        >
-          <AnimatePresence>
-            {!backgroundHtml && (
-              <motion.div
-                className={styles.welcomeScreen}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <div className={styles.welcomeContent}>
-                  <h1 className={styles.title}>AI Webpage Generator</h1>
-                  <p className={styles.subtitle}>Enter your idea, let AI create a unique webpage for you</p>
-                  <div className={styles.features}>
-                    <div className={styles.feature}>
-                      <span className={styles.icon}>🚀</span>
-                      <span>Fast Generation</span>
-                    </div>
-                    <div className={styles.feature}>
-                      <span className={styles.icon}>🎨</span>
-                      <span>Creative Design</span>
-                    </div>
-                    <div className={styles.feature}>
-                      <span className={styles.icon}>🔧</span>
-                      <span>Custom Options</span>
-                    </div>
-                  </div>
-                  <button className={styles.startButton} onClick={toggleExpand}>
-                    Start Creating
-                  </button>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <motion.div 
-            className={styles.floatingBar}
-            initial={false}
-            animate={isExpanded ? "expanded" : "collapsed"}
+    <>
+      <AnimatePresence>
+        {showContent && (
+          <motion.div
+            className={styles.container}
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
           >
-            <AnimatePresence mode="wait">
-              {isExpanded ? (
-                <motion.div 
-                  key="input"
-                  className={styles.inputContainer}
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: "300px" }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.3 }}
+            <AnimatePresence>
+              {!backgroundHtml && (
+                <motion.div
+                  className={styles.welcomeScreen}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.5 }}
                 >
-                  <input 
-                    ref={inputRef}
-                    type="text" 
-                    placeholder="Describe your webpage idea..." 
-                    className={styles.input}
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                  />
-                  <button 
-                    onClick={handleSubmit} 
-                    className={styles.submitButton} 
-                    disabled={isLoading || !inputText.trim()}
-                  >
-                    {isLoading ? 'Generating...' : 'Generate'}
-                  </button>
+                  <div className={styles.welcomeContent}>
+                    <h1 className={styles.title}>AI Webpage Generator</h1>
+                    <p className={styles.subtitle}>Enter your idea, let AI create a unique webpage for you</p>
+                    <div className={styles.features}>
+                      <div className={styles.feature}>
+                        <span className={styles.icon}>🚀</span>
+                        <span>Fast Generation</span>
+                      </div>
+                      <div className={styles.feature}>
+                        <span className={styles.icon}>🎨</span>
+                        <span>Creative Design</span>
+                      </div>
+                      <div className={styles.feature}>
+                        <span className={styles.icon}>🔧</span>
+                        <span>Custom Options</span>
+                      </div>
+                    </div>
+                    <button className={styles.startButton} onClick={toggleExpand}>
+                      Start Creating
+                    </button>
+                  </div>
                 </motion.div>
-              ) : (
-                <motion.button
-                  key="button"
-                  className={styles.circleButton}
-                  onClick={toggleExpand}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                >
-                  +
-                </motion.button>
               )}
             </AnimatePresence>
+            <motion.div
+              className={styles.floatingBar}
+              initial={false}
+              animate={isExpanded ? "expanded" : "collapsed"}
+            >
+              <AnimatePresence mode="wait">
+                {isExpanded ? (
+                  <motion.div
+                    key="input"
+                    className={styles.inputContainer}
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "300px" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="Describe your webpage idea..."
+                      className={styles.input}
+                      value={inputText}
+                      onChange={(e) => setInputText(e.target.value)}
+                      onKeyPress={handleKeyPress}
+                    />
+                    <button
+                      onClick={handleSubmit}
+                      className={styles.submitButton}
+                      disabled={isLoading || !inputText.trim()}
+                    >
+                      {isLoading ? 'Generating...' : 'Generate'}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.button
+                    key="button"
+                    className={styles.circleButton}
+                    onClick={toggleExpand}
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                  >
+                    +
+                  </motion.button>
+                )}
+              </AnimatePresence>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        )}
+      </AnimatePresence>
+      {backgroundHtml && <DevTools />}
+    </>
   )
 }
