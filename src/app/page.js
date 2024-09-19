@@ -13,6 +13,14 @@ export default function Home() {
   const [backgroundHtml, setBackgroundHtml] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showContent, setShowContent] = useState(true)
+  const [suggestions, setSuggestions] = useState([
+    'Portfolio website',
+    'Online store',
+    'Blog',
+    'Restaurant menu',
+    'Travel guide'
+  ])
+  const [showSuggestions, setShowSuggestions] = useState(false)
   const inputRef = useRef(null)
 
   const toggleExpand = () => {
@@ -62,9 +70,25 @@ export default function Home() {
     }
   }
 
+  const handleInputClick = () => {
+    setShowSuggestions(true);
+  }
+
+  const handleInputBlur = () => {
+    // Delay hiding suggestions to allow for clicks
+    setTimeout(() => setShowSuggestions(false), 200);
+  }
+
+  const handleSuggestionClick = (suggestion) => {
+    setInputText(suggestion);
+    setShowSuggestions(false);
+    // Don't call handleSubmit() here, let the user decide when to submit
+  }
+
   useEffect(() => {
     if (backgroundHtml) {
-      const iframe = document.createElement('iframe')
+      const iframe = document.getElementById('generated_iframe') || document.createElement('iframe');
+      iframe.id = 'generated_iframe'
       iframe.srcdoc = backgroundHtml
       iframe.style.position = 'fixed'
       iframe.style.top = '0'
@@ -139,7 +163,7 @@ export default function Home() {
                     key="input"
                     className={styles.inputContainer}
                     initial={{ opacity: 0, width: 0 }}
-                    animate={{ opacity: 1, width: "300px" }}
+                    animate={{ opacity: 1, width: "350px" }}
                     exit={{ opacity: 0, width: 0 }}
                     transition={{ duration: 0.3 }}
                   >
@@ -151,6 +175,8 @@ export default function Home() {
                       value={inputText}
                       onChange={(e) => setInputText(e.target.value)}
                       onKeyPress={handleKeyPress}
+                      onClick={handleInputClick}
+                      onBlur={handleInputBlur}
                     />
                     <button
                       onClick={handleSubmit}
@@ -159,14 +185,37 @@ export default function Home() {
                     >
                       {isLoading ? 'Generating...' : 'Generate'}
                     </button>
+                    <AnimatePresence>
+                      {showSuggestions && (
+                        <motion.ul
+                          className={styles.suggestions}
+                          initial={{ opacity: 0, y: 10 }} // Change from -10 to 10
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }} // Change from -10 to 10
+                          transition={{ duration: 0.2 }}
+                        >
+                          {suggestions.map((suggestion, index) => (
+                            <motion.li
+                              key={index}
+                              onMouseDown={(e) => {
+                                e.preventDefault(); // Prevent input blur
+                                handleSuggestionClick(suggestion);
+                              }}
+                            >
+                              {suggestion}
+                            </motion.li>
+                          ))}
+                        </motion.ul>
+                      )}
+                    </AnimatePresence>
                   </motion.div>
                 ) : (
                   <motion.button
                     key="button"
-                    className={styles.circleButton}
+                    className={styles.squareButton}
                     onClick={toggleExpand}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.9 }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
                   >
                     +
                   </motion.button>

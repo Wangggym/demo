@@ -113,7 +113,7 @@ export async function generateHtml(prompt) {
         { role: "system", content: enhancedPrompt },
         { role: "user", content: "Generate the HTML based on the above guidelines." }
       ],
-      max_tokens: 2000
+      max_tokens: 4096
     });
     return response.choices[0].message.content.trim();
   } catch (error) {

@@ -11,10 +11,12 @@ export default function DevTools({ onHtmlChange }) {
   const overlayRef = useRef(null);
   const iframeRef = useRef(null);
   const inputRef = useRef(null);
+  const [history, setHistory] = useState([]);
+  const [currentVersion, setCurrentVersion] = useState(0);
 
   useEffect(() => {
     const setupListeners = () => {
-      const iframe = document.querySelector('iframe');
+      const iframe = document.getElementById('generated_iframe');
       if (iframe) {
         iframeRef.current = iframe;
         if (isActive && iframe.contentDocument) {
@@ -129,6 +131,10 @@ export default function DevTools({ onHtmlChange }) {
         const newHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
         onHtmlChange(newHtml);
         
+        // Add new version to history
+        setHistory(prevHistory => [...prevHistory, { html: newHtml, timestamp: new Date() }]);
+        setCurrentVersion(prevVersion => prevVersion + 1);
+        
         // Dispatch a custom event to notify of HTML change
         window.dispatchEvent(new Event('htmlChanged'));
       } else {
@@ -139,6 +145,16 @@ export default function DevTools({ onHtmlChange }) {
     setIsLoading(false);
     setSelectedElement(null);
     setIsActive(false); // Reset isActive state after any change attempt
+  };
+
+  const handleVersionChange = (index) => {
+    if (index !== currentVersion && history[index]) {
+      const version = history[index];
+      if (iframeRef.current) {
+        onHtmlChange(version.html);
+        setCurrentVersion(index);
+      }
+    }
   };
 
   const handleKeyPress = (e) => {
@@ -206,6 +222,28 @@ export default function DevTools({ onHtmlChange }) {
       {isLoading && (
         <div className={styles.loadingOverlay}>
           <div className={styles.spinner}></div>
+        </div>
+      )}
+      
+      {history.length > 0 && (
+        <div className={styles.historyBar}>
+          {history.map((version, index) => (
+            <motion.div 
+              key={index}
+              className={`${styles.historyItem} ${index === currentVersion ? styles.currentVersion : ''}`}
+              onClick={() => handleVersionChange(index)}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <iframe
+                srcDoc={`<html><head><style>body{zoom:0.2;-moz-transform:scale(0.2);-moz-transform-origin:0 0;}</style></head><body>${version.html}</body></html>`}
+                width={120}
+                height={50}
+              />
+              <span className={styles.versionNumber}>V{index + 1}</span>
+              <span className={styles.timestamp}>{version.timestamp.toLocaleTimeString()}</span>
+            </motion.div>
+          ))}
         </div>
       )}
     </motion.div>
