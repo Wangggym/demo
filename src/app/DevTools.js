@@ -179,7 +179,7 @@ export default function DevTools({ onHtmlChange }) {
       >
         {isActive ? 'Cancel Selection' : 'Select Element to change what you want'}
       </motion.button>
-      <motion.button 
+      {/* <motion.button 
         className={styles.regenerateButton} 
         onClick={handleRegenerateClick}
         whileHover={{ scale: 1.05 }}
@@ -187,7 +187,7 @@ export default function DevTools({ onHtmlChange }) {
         disabled={!changeInput.trim() || isLoading}
       >
         Click me to regenerate
-      </motion.button>
+      </motion.button> */}
       <div ref={overlayRef} className={styles.overlay}></div>
       {selectedElement && (
         <div className={styles.elementInfo}>

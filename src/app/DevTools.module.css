@@ -107,6 +107,11 @@
   border-radius: 5px;
   overflow: hidden;
   font-size: 12px;
+
+}
+
+.elementInfo p {
+  margin: 0;
 }
 
 .domTree {
@@ -134,7 +139,7 @@
 }
 
 .changeInput {
-  width: 100%;
+  width: 90%;
   padding: 6px;
   margin: 5px 0;
   border: 1px solid #ddd;
