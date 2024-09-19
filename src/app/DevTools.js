@@ -1,43 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import styles from './DevTools.module.css';
 import { generateHtmlChange } from './openaiService';
-
-function DOMTreeNode({ node, depth = 0, selectedNode, onNodeClick }) {
-  const isSelected = node === selectedNode;
-  const hasChildren = node.children.length > 0;
-
-  return (
-    <div style={{ marginLeft: `${depth * 20}px` }}>
-      <span 
-        className={`${styles.treeNode} ${isSelected ? styles.selectedNode : ''}`}
-        onClick={() => onNodeClick(node)}
-      >
-        {hasChildren ? (node.expanded ? '▼' : '▶') : '•'} {node.tagName.toLowerCase()}
-        {node.id && `#${node.id}`}
-        {node.className && `.${node.className.split(' ').join('.')}`}
-      </span>
-      {hasChildren && node.expanded && (
-        <div>
-          {Array.from(node.children).map((child, index) => (
-            <DOMTreeNode 
-              key={index} 
-              node={child} 
-              depth={depth + 1} 
-              selectedNode={selectedNode}
-              onNodeClick={onNodeClick}
-            />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function DevTools({ onHtmlChange }) {
   const [isActive, setIsActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
-  const [domTree, setDomTree] = useState(null);
   const [changeInput, setChangeInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const overlayRef = useRef(null);
@@ -52,7 +20,6 @@ export default function DevTools({ onHtmlChange }) {
         if (isActive && iframe.contentDocument) {
           iframe.contentDocument.addEventListener('mousemove', handleMouseMove);
           iframe.contentDocument.addEventListener('click', handleClick);
-          setDomTree(iframe.contentDocument.body);
         }
       }
     };
@@ -73,6 +40,24 @@ export default function DevTools({ onHtmlChange }) {
     return cleanupListeners;
   }, [isActive]);
 
+  useEffect(() => {
+    const handleHtmlChange = () => {
+      setSelectedElement(null);
+      setIsActive(false);
+      setChangeInput('');
+      if (overlayRef.current) {
+        overlayRef.current.style.display = 'none';
+      }
+    };
+
+    // Assuming there's a way to detect HTML changes, e.g., a custom event
+    window.addEventListener('htmlChanged', handleHtmlChange);
+
+    return () => {
+      window.removeEventListener('htmlChanged', handleHtmlChange);
+    };
+  }, []);
+
   const handleMouseMove = (e) => {
     const element = e.target;
     if (element && element !== overlayRef.current) {
@@ -85,33 +70,8 @@ export default function DevTools({ onHtmlChange }) {
     const element = e.target;
     if (element && element !== overlayRef.current) {
       setSelectedElement(element);
-      updateDOMTree(element);
       setIsActive(false);
     }
-  };
-
-  const updateDOMTree = (selectedElement) => {
-    if (iframeRef.current && iframeRef.current.contentDocument) {
-      const body = iframeRef.current.contentDocument.body;
-      setDomTree(body);
-      expandToNode(body, selectedElement);
-    }
-  };
-
-  const expandToNode = (node, targetNode) => {
-    if (node === targetNode) {
-      node.expanded = true;
-      return true;
-    }
-    if (node.children) {
-      for (let child of node.children) {
-        if (expandToNode(child, targetNode)) {
-          node.expanded = true;
-          return true;
-        }
-      }
-    }
-    return false;
   };
 
   const highlightElement = (element) => {
@@ -136,22 +96,6 @@ export default function DevTools({ onHtmlChange }) {
     }
   };
 
-  const handleTreeNodeClick = (node) => {
-    node.expanded = !node.expanded;
-    setSelectedElement(node);
-    highlightElement(node);
-    setDomTree({ ...domTree });
-  };
-
-  const toggleExpand = () => {
-    setIsExpanded(!isExpanded);
-    setTimeout(() => {
-      if (inputRef.current) {
-        inputRef.current.focus();
-      }
-    }, 300);
-  };
-
   const handleChangeSubmit = async () => {
     if (!changeInput.trim()) {
       alert('Please enter a change request');
@@ -159,21 +103,65 @@ export default function DevTools({ onHtmlChange }) {
     }
     setIsLoading(true);
     if (iframeRef.current && iframeRef.current.contentDocument && selectedElement) {
-      const updatedHtml = await generateHtmlChange(selectedElement, iframeRef.current.contentDocument.body, changeInput);
+      const updatedHtml = await generateHtmlChange(
+        selectedElement,
+        iframeRef.current.contentDocument.body,
+        changeInput,
+        {
+          tagName: selectedElement.tagName,
+          className: selectedElement.className,
+          id: selectedElement.id,
+          innerHTML: selectedElement.innerHTML,
+          style: selectedElement.style.cssText,
+        }
+      );
       if (updatedHtml) {
-        onHtmlChange(updatedHtml);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = updatedHtml;
+        const newElement = tempDiv.firstElementChild || tempDiv;
+
+        // Apply changes to the selected element
+        selectedElement.outerHTML = newElement.outerHTML;
+
+        // Trigger a reflow to ensure changes are applied
+        iframeRef.current.contentDocument.body.offsetHeight;
+
+        const newHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
+        onHtmlChange(newHtml);
+        
+        // Dispatch a custom event to notify of HTML change
+        window.dispatchEvent(new Event('htmlChanged'));
       } else {
         alert('Error generating HTML change, please try again.');
       }
     }
     setChangeInput('');
     setIsLoading(false);
+    setSelectedElement(null);
+    setIsActive(false); // Reset isActive state after any change attempt
   };
 
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !isLoading) {
       handleChangeSubmit();
     }
+  };
+
+  const togglePanel = () => {
+    setIsPanelCollapsed(!isPanelCollapsed);
+  };
+
+  const handleRegenerateClick = () => {
+    if (changeInput.trim()) {
+      handleChangeSubmit();
+    } else {
+      alert('Please enter a change request before regenerating');
+    }
+  };
+
+  const handleHtmlChange = (newHtml) => {
+    onHtmlChange(newHtml);
+    setIsActive(false);
   };
 
   return (
@@ -185,44 +173,33 @@ export default function DevTools({ onHtmlChange }) {
     >
       <motion.button 
         className={styles.devToolsButton} 
-        onClick={() => setIsActive(!isActive)}
+        onClick={toggleDevTools}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
-        {isActive ? 'Stop Selecting' : 'Select Element to change what you want'}
+        {isActive ? 'Cancel Selection' : 'Select Element to change what you want'}
+      </motion.button>
+      <motion.button 
+        className={styles.regenerateButton} 
+        onClick={handleRegenerateClick}
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        disabled={!changeInput.trim() || isLoading}
+      >
+        Click me to regenerate
       </motion.button>
       <div ref={overlayRef} className={styles.overlay}></div>
       {selectedElement && (
         <div className={styles.elementInfo}>
-          <h3>Selected Element:</h3>
           <p>Tag: {selectedElement.tagName}</p>
-          <p>Classes: {selectedElement.className}</p>
-          <p>ID: {selectedElement.id}</p>
           <input
             ref={inputRef}
             type="text"
-            placeholder="Describe the change you want..."
+            placeholder="Describe the change..."
             className={styles.changeInput}
             value={changeInput}
             onChange={(e) => setChangeInput(e.target.value)}
             onKeyPress={handleKeyPress}
-          />
-          <button
-            onClick={handleChangeSubmit}
-            className={styles.changeButton}
-            disabled={isLoading || !changeInput.trim()}
-          >
-            {isLoading ? 'Updating...' : 'Update Element'}
-          </button>
-        </div>
-      )}
-      {domTree && (
-        <div className={styles.domTree}>
-          <h3>DOM Tree:</h3>
-          <DOMTreeNode 
-            node={domTree} 
-            selectedNode={selectedElement}
-            onNodeClick={handleTreeNodeClick}
           />
         </div>
       )}

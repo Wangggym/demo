@@ -6,8 +6,8 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  padding: 15px;
-  max-width: 350px;
+  padding: 10px;
+  max-width: 300px;
   width: 100%;
 }
 
@@ -102,10 +102,11 @@
 }
 
 .elementInfo {
-  background-color: #f8f9fa;
-  border-radius: 4px;
-  padding: 10px;
-  margin-top: 10px;
+  background-color: #f0f0f0;
+  padding: 8px;
+  border-radius: 5px;
+  overflow: hidden;
+  font-size: 12px;
 }
 
 .domTree {
@@ -134,11 +135,11 @@
 
 .changeInput {
   width: 100%;
-  padding: 8px;
-  margin: 10px 0;
+  padding: 6px;
+  margin: 5px 0;
   border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .changeButton {
@@ -190,4 +191,35 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+.panelContainer {
+  position: relative;
+  margin-top: 10px;
+}
+
+.regenerateButton {
+  background-color: #e74c3c;
+  border: none;
+  color: white;
+  padding: 8px 12px;
+  text-align: center;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  font-size: 12px;
+  margin-top: 10px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.3s, transform 0.2s;
+  font-weight: bold;
+}
+
+.regenerateButton:hover {
+  background-color: #c0392b;
+}
+
+.regenerateButton:disabled {
+  background-color: #95a5a6;
+  cursor: not-allowed;
 }
