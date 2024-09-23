@@ -272,3 +272,73 @@
   font-size: 10px;
   color: #666;
 }
+
+.evaluation {
+  background-color: #f0f0f0;
+  border-radius: 8px;
+  padding: 10px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+  max-height: 100px;
+  overflow: auto;
+}
+
+.evaluation.collapsed {
+  padding: 5px;
+}
+
+.evaluationHeader {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.collapseIcon {
+  font-size: 0.8rem;
+}
+
+.evaluationItem {
+  margin-bottom: 10px;
+}
+
+.evaluationItem h4 {
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+.feedbackText, .suggestionText {
+  font-size: 0.8rem;
+  margin: 3px 0;
+}
+
+.overallScore {
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.optimizeButton {
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  font-size: 0.9rem;
+  margin: 4px 2px;
+  transition-duration: 0.4s;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.optimizeButton:hover {
+  background-color: #45a049;
+}
+
+.optimizeButton:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}

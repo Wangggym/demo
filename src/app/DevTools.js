@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import styles from './DevTools.module.css';
-import { generateHtmlChange } from './openaiService';
+import { generateHtmlChange, evaluateHtml, optimizeHtml } from './openaiService';
 
-export default function DevTools({ onHtmlChange }) {
+export default function DevTools({ onHtmlChange, initialHtml }) {
   const [isActive, setIsActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
   const [changeInput, setChangeInput] = useState('');
@@ -13,6 +13,14 @@ export default function DevTools({ onHtmlChange }) {
   const inputRef = useRef(null);
   const [history, setHistory] = useState([]);
   const [currentVersion, setCurrentVersion] = useState(0);
+  const [isEvaluating, setIsEvaluating] = useState(false);
+  const [isEvaluationCollapsed, setIsEvaluationCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (initialHtml) {
+      addNewVersion(initialHtml);
+    }
+  }, []);
 
   useEffect(() => {
     const setupListeners = () => {
@@ -33,11 +41,7 @@ export default function DevTools({ onHtmlChange }) {
       }
     };
 
-    if (isActive) {
-      setupListeners();
-    } else {
-      cleanupListeners();
-    }
+    setupListeners();
 
     return cleanupListeners;
   }, [isActive]);
@@ -98,6 +102,33 @@ export default function DevTools({ onHtmlChange }) {
     }
   };
 
+  const addNewVersion = (newHtml) => {
+    const newVersion = {
+      html: newHtml,
+      evaluation: null,
+      timestamp: new Date()
+    };
+    var newHistory = [...history, newVersion];
+    setHistory(newHistory);
+    const newVersionIndex = newHistory.length - 1;
+    setCurrentVersion(newVersionIndex);
+    onHtmlChange(newHtml);
+
+    // Start evaluation (non-blocking)
+    setIsEvaluating(true);
+    evaluateHtml(newHtml).then(newEvaluation => {
+      setHistory(prevHistory => {
+        const updatedHistory = [...prevHistory];
+        updatedHistory[newVersionIndex].evaluation = newEvaluation;
+        return updatedHistory;
+      });
+      setIsEvaluating(false);
+    }).catch(error => {
+      console.error('Error evaluating HTML:', error);
+      setIsEvaluating(false);
+    });
+  };
+
   const handleChangeSubmit = async () => {
     if (!changeInput.trim()) {
       alert('Please enter a change request');
@@ -129,12 +160,9 @@ export default function DevTools({ onHtmlChange }) {
         iframeRef.current.contentDocument.body.offsetHeight;
 
         const newHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
-        onHtmlChange(newHtml);
-        
-        // Add new version to history
-        setHistory(prevHistory => [...prevHistory, { html: newHtml, timestamp: new Date() }]);
-        setCurrentVersion(prevVersion => prevVersion + 1);
-        
+
+        addNewVersion(newHtml);  // 非阻塞调用
+
         // Dispatch a custom event to notify of HTML change
         window.dispatchEvent(new Event('htmlChanged'));
       } else {
@@ -144,13 +172,30 @@ export default function DevTools({ onHtmlChange }) {
     setChangeInput('');
     setIsLoading(false);
     setSelectedElement(null);
-    setIsActive(false); // Reset isActive state after any change attempt
+    setIsActive(false);
+  };
+
+  const handleOptimize = async () => {
+    const currentVersionData = history[currentVersion];
+    if (!currentVersionData.evaluation) {
+      alert('Please wait for the evaluation to complete before optimizing.');
+      return;
+    }
+    setIsLoading(true);
+    const optimizedHtml = await optimizeHtml(currentVersionData.html, currentVersionData.evaluation);
+    if (optimizedHtml) {
+      addNewVersion(optimizedHtml);  // 非阻塞调用
+    } else {
+      alert('Error optimizing HTML, please try again.');
+    }
+    setIsLoading(false);
   };
 
   const handleVersionChange = (index) => {
     if (index !== currentVersion && history[index]) {
       const version = history[index];
       if (iframeRef.current) {
+        setIsActive(false);
         onHtmlChange(version.html);
         setCurrentVersion(index);
       }
@@ -180,21 +225,26 @@ export default function DevTools({ onHtmlChange }) {
     setIsActive(false);
   };
 
+  const toggleEvaluation = () => {
+    setIsEvaluationCollapsed(!isEvaluationCollapsed);
+  };
+
   return (
-    <motion.div 
+    <motion.div
       className={styles.devTools}
       initial={{ opacity: 0, scale: 0.5 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <motion.button 
-        className={styles.devToolsButton} 
+      <motion.button
+        className={styles.devToolsButton}
         onClick={toggleDevTools}
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
       >
         {isActive ? 'Cancel Selection' : 'Select Element to change what you want'}
       </motion.button>
+
       {/* <motion.button 
         className={styles.regenerateButton} 
         onClick={handleRegenerateClick}
@@ -224,11 +274,60 @@ export default function DevTools({ onHtmlChange }) {
           <div className={styles.spinner}></div>
         </div>
       )}
-      
+
+      {history[currentVersion]?.evaluation && (
+        <div className={`${styles.evaluation} ${isEvaluationCollapsed ? styles.collapsed : ''}`}>
+          <h3 onClick={toggleEvaluation} className={styles.evaluationHeader}>
+            Evaluation Results
+            <span className={styles.collapseIcon}>{isEvaluationCollapsed ? '▼' : '▲'}</span>
+          </h3>
+          <AnimatePresence>
+            {!isEvaluationCollapsed && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {Object.entries(history[currentVersion].evaluation).map(([key, value]) =>
+                  key !== 'overallScore' ? (
+                    <div key={key} className={styles.evaluationItem}>
+                      <h4>{key.charAt(0).toUpperCase() + key.slice(1)}</h4>
+                      <p>Score: {value.score}/10</p>
+                      <p className={styles.feedbackText}>{value.feedback}</p>
+                      <p className={styles.suggestionText}>Suggestion: {value.suggestion}</p>
+                    </div>
+                  ) : null
+                )}
+                <div className={styles.overallScore}>
+                  <h4>Overall Score: {history[currentVersion].evaluation.overallScore}/10</h4>
+                </div>
+                <motion.button
+                  className={styles.optimizeButton}
+                  onClick={handleOptimize}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  disabled={isLoading || isEvaluating || !history[currentVersion].evaluation}
+                >
+                  Optimize HTML
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {isEvaluating && (
+        <div className={styles.evaluatingOverlay}>
+          <div className={styles.spinner}></div>
+          <p>Evaluating HTML...</p>
+        </div>
+      )}
+
       {history.length > 0 && (
         <div className={styles.historyBar}>
           {history.map((version, index) => (
-            <motion.div 
+            <motion.div
               key={index}
               className={`${styles.historyItem} ${index === currentVersion ? styles.currentVersion : ''}`}
               onClick={() => handleVersionChange(index)}
@@ -242,6 +341,9 @@ export default function DevTools({ onHtmlChange }) {
               />
               <span className={styles.versionNumber}>V{index + 1}</span>
               <span className={styles.timestamp}>{version.timestamp.toLocaleTimeString()}</span>
+              {version.evaluation && (
+                <span className={styles.score}>Score: {version.evaluation.overallScore}/10</span>
+              )}
             </motion.div>
           ))}
         </div>
