@@ -225,7 +225,7 @@ export default function Home() {
           </motion.div>
         )}
       </AnimatePresence>
-      {backgroundHtml && <DevTools onHtmlChange={handleHtmlChange} />}
+      {backgroundHtml && <DevTools onHtmlChange={handleHtmlChange} initialHtml={backgroundHtml} />}
     </>
   )
 }

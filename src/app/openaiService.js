@@ -83,6 +83,110 @@ function getDomPath(element, bodyElement) {
   return path.join(" > ");
 }
 
+export async function evaluateHtml(html) {
+  const prompt = `
+    Evaluate the following HTML based on these criteria:
+    1. Visual Appeal: Consider aesthetic coherence, color scheme, typography, and layout balance.
+    2. Content Quality: Assess relevance, depth, variety, and organization of information.
+    3. User-Friendliness: Evaluate navigation, call-to-actions, design consistency, and mobile-friendliness.
+    4. Interactivity: Consider interactive elements, transitions, multimedia content, and social sharing options.
+    5. Prompt Fulfillment: Evaluate how well this HTML fulfills the original user prompt, considering completeness, creativity, and unexpected positive additions.
+
+    For each criterion, provide:
+    1. A score out of 10
+    2. A brief feedback (max 50 words)
+    3. One specific suggestion for improvement
+
+    Respond in JSON format:
+    {
+      "visualAppeal": {
+        "score": 0,
+        "feedback": "",
+        "suggestion": ""
+      },
+      "contentQuality": {
+        "score": 0,
+        "feedback": "",
+        "suggestion": ""
+      },
+      "userFriendliness": {
+        "score": 0,
+        "feedback": "",
+        "suggestion": ""
+      },
+      "interactivity": {
+        "score": 0,
+        "feedback": "",
+        "suggestion": ""
+      },
+      "promptFulfillment": {
+        "score": 0,
+        "feedback": "",
+        "suggestion": ""
+      },
+      "overallScore": 0
+    }
+
+    HTML to evaluate:
+    ${html}
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "You are an expert web page evaluator. Provide concise, actionable feedback." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 1000,
+      response_format: { type: "json_object" }
+    });
+    return JSON.parse(response.choices[0].message.content);
+  } catch (error) {
+    console.error('Error evaluating HTML:', error);
+    return null;
+  }
+}
+
+export async function optimizeHtml(html, evaluation) {
+  const prompt = `
+    You are an expert HTML optimizer. Based on the evaluation feedback, improve the HTML to address the suggestions.
+
+    Original HTML:
+    ${html}
+
+    Key Suggestions:
+    ${Object.values(evaluation)
+      .filter(section => section.suggestion)
+      .map(section => `- ${section.suggestion}`)
+      .join('\n')}
+
+    Guidelines:
+    1. Focus on the suggestions provided.
+    2. Maintain the core structure and purpose of the HTML.
+    3. Use Tailwind CSS classes appropriately.
+    4. Ensure the HTML is complete and valid.
+
+    Provide only the optimized HTML, without any explanations or markdown formatting.
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-4", // Updated model
+      messages: [
+        { role: "system", content: "You are an expert HTML optimizer." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 4096
+    });
+    return response.choices[0].message.content.trim();
+  } catch (error) {
+    console.error('Error optimizing HTML:', error);
+    return null;
+  }
+}
+
+// Modified generateHtml function to include evaluation and optimization
 export async function generateHtml(prompt) {
   const enhancedPrompt = `
     You are an expert HTML and Tailwind CSS developer. Create a complete, valid, and well-structured HTML page based on the user's request.
