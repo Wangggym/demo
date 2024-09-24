@@ -1,7 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './DevTools.module.css';
-import { generateHtmlChange, evaluateHtml, optimizeHtml } from './openaiService';
+import { generateHtmlChange, evaluateHtml, optimizeHtml, insertHtmlComponent } from './openaiService';
+
+const exampleComponents = [
+  {
+    name: 'Button',
+    html: '<button class="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">Click Me</button>'
+  },
+  {
+    name: 'Card',
+    html: '<div class="max-w-sm rounded overflow-hidden shadow-lg"><img class="w-full" src="https://via.placeholder.com/150" alt="Placeholder"><div class="px-6 py-4"><div class="font-bold text-xl mb-2">Card Title</div><p class="text-gray-700 text-base">Some quick example text to build on the card title and make up the bulk of the card\'s content.</p></div></div>'
+  }
+];
 
 export default function DevTools({ onHtmlChange, initialHtml }) {
   const [isActive, setIsActive] = useState(false);
@@ -15,6 +26,7 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
   const [currentVersion, setCurrentVersion] = useState(0);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isEvaluationCollapsed, setIsEvaluationCollapsed] = useState(false);
+  const [selectedComponent, setSelectedComponent] = useState(null);
 
   useEffect(() => {
     if (initialHtml) {
@@ -71,12 +83,55 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
     }
   };
 
-  const handleClick = (e) => {
+  const handleClickComponent = (component) => {
+    setSelectedComponent(component)
+    setIsActive(true)
+  };
+
+  const handleClick = async (e) => {
     e.preventDefault();
     const element = e.target;
     if (element && element !== overlayRef.current) {
-      setSelectedElement(element);
-      setIsActive(false);
+      if (selectedComponent) {
+        const parentElement = element.closest('div, section, article, main, body, header, footer'); // 查找可以插入的父级元素
+        if (parentElement) {
+          setIsLoading(true);
+          const updatedHtml = await insertHtmlComponent(
+            parentElement.parentElement,
+            selectedComponent.html,
+            selectedComponent.name,
+            e.clientX - parentElement.parentElement.getBoundingClientRect().left, // 计算相对父级元素的位置
+            e.clientY - parentElement.parentElement.getBoundingClientRect().top
+          );
+          if (updatedHtml) {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = updatedHtml;
+            const newElement = tempDiv.firstElementChild || tempDiv;
+
+            // Apply changes to the selected element
+            parentElement.outerHTML = newElement.outerHTML;
+
+            // Trigger a reflow to ensure changes are applied
+            iframeRef.current.contentDocument.body.offsetHeight;
+
+            const newHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
+
+            addNewVersion(newHtml);  // 非阻塞调用
+
+            // Dispatch a custom event to notify of HTML change
+            window.dispatchEvent(new Event('htmlChanged'));
+          } else {
+            alert('Error inserting HTML component, please try again.');
+          }
+          setIsLoading(false);
+          setSelectedComponent(null);
+        } else {
+          alert('No suitable parent element found for insertion.');
+        }
+      } else {
+        setSelectedElement(element);
+        setIsActive(false);
+      }
     }
   };
 
@@ -245,15 +300,6 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
         {isActive ? 'Cancel Selection' : 'Select Element to change what you want'}
       </motion.button>
 
-      {/* <motion.button 
-        className={styles.regenerateButton} 
-        onClick={handleRegenerateClick}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        disabled={!changeInput.trim() || isLoading}
-      >
-        Click me to regenerate
-      </motion.button> */}
       <div ref={overlayRef} className={styles.overlay}></div>
       {selectedElement && (
         <div className={styles.elementInfo}>
@@ -348,6 +394,20 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
           ))}
         </div>
       )}
+
+      <div className={styles.componentBar}>
+        {exampleComponents.map((component, index) => (
+          <motion.button
+            key={index}
+            className={styles.componentButton}
+            onClick={() => handleClickComponent(component)}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {component.name}
+          </motion.button>
+        ))}
+      </div>
     </motion.div>
   );
 }

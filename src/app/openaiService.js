@@ -14,7 +14,8 @@ function serializeElement(element) {
     attributes: Array.from(element.attributes).map(attr => ({
       name: attr.name,
       value: attr.value
-    }))
+    })),
+    innerHTML: element.innerHTML
   };
 }
 
@@ -172,7 +173,7 @@ export async function optimizeHtml(html, evaluation) {
 
   try {
     const response = await openai.chat.completions.create({
-      model: "gpt-4", // Updated model
+      model: "gpt-3.5-turbo",
       messages: [
         { role: "system", content: "You are an expert HTML optimizer." },
         { role: "user", content: prompt }
@@ -225,3 +226,52 @@ export async function generateHtml(prompt) {
     return null;
   }
 }
+
+export async function insertHtmlComponent(element, componentHtml, componentName, clickX, clickY) {
+  const elementInfo = serializeElement(element);
+  const prompt = `
+    Given the following HTML element:
+    Current content: ${elementInfo.innerHTML}
+
+    And the following component to insert:
+    ${componentHtml}
+
+    Component name: ${componentName}
+
+    The user clicked at coordinates (X: ${clickX}, Y: ${clickY}) within the element.
+
+    Please determine the most appropriate insertion point for the component based on the click coordinates and the component's nature. Adjust the styles if necessary to maintain a consistent layout and appearance.
+
+    Guidelines:
+    1. Ensure the component is inserted in a valid HTML structure.
+    2. Maintain the original structure of the element as much as possible.
+    3. Use Tailwind CSS classes for styling instead of inline styles.
+    4. Ensure color values are using Tailwind's color palette classes.
+    5. Do not use position-based styles (e.g., position: absolute, position: relative).
+    6. Insert the component at the same level as the existing content (e.g., as a sibling to <h1>).
+    7. Adjust the styles to ensure a consistent layout and appearance.
+    8. Ensure the inserted component is properly aligned with the existing content. Add necessary alignment classes (e.g., flex, items-center, justify-center).
+
+    Return the updated HTML for this element in JSON format:
+    {
+      "updatedHtml": "<updated HTML here>"
+    }
+  `;
+
+  try {
+    const response = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: "You are an expert HTML and CSS generator. Insert the component into the given element based on the click coordinates and component name." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 500
+    });
+    const result = JSON.parse(response.choices[0].message.content.trim());
+    return result.updatedHtml;
+  } catch (error) {
+    console.error('Error inserting HTML component:', error);
+    return null;
+  }
+}
+
