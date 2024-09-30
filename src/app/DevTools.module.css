@@ -344,6 +344,24 @@
   cursor: not-allowed;
 }
 
+.deviceSelector {
+  margin-bottom: 10px;
+}
+
+.deviceDropdown {
+  padding: 5px;
+  font-size: 14px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+}
+
+/* You may need to adjust the iframe styles in your main application */
+#generated_iframe {
+  transition: width 0.3s, height 0.3s;
+  border: 1px solid #ccc;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
 .voiceButton {
   margin-left: 5px;
   padding: 8px;

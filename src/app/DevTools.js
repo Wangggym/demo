@@ -14,6 +14,13 @@ const exampleComponents = [
   }
 ];
 
+const devicePresets = [
+  { name: 'Desktop', width: 1280, height: 800 },
+  { name: 'Laptop', width: 1024, height: 768 },
+  { name: 'Tablet', width: 768, height: 1024 },
+  { name: 'Mobile', width: 375, height: 667 },
+];
+
 export default function DevTools({ onHtmlChange, initialHtml }) {
   const [isActive, setIsActive] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
@@ -27,6 +34,7 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [isEvaluationCollapsed, setIsEvaluationCollapsed] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState(null);
+  const [selectedDevice, setSelectedDevice] = useState(devicePresets[0]);
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef(null);
 
@@ -286,6 +294,22 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
     setIsEvaluationCollapsed(!isEvaluationCollapsed);
   };
 
+  const handleDeviceChange = (e) => {
+    const device = devicePresets.find(d => d.name === e.target.value);
+    setSelectedDevice(device);
+    const iframe = document.getElementById('generated_iframe');
+    if (iframe) {
+      iframe.style.width = `${device.width}px`;
+      iframe.style.height = `${device.height}px`;
+      iframe.style.left = `calc(50% - ${device.width / 2}px)`;
+      iframe.style.top = `calc(50% - ${device.height / 2}px)`;
+    }
+  };
+
+
+  useEffect(() => {
+    handleDeviceChange({ target: { value: 'Desktop' } });
+  }, []);
   const stopListening = () => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
@@ -332,6 +356,7 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
+
       <motion.button
         className={styles.devToolsButton}
         onClick={toggleDevTools}
@@ -444,7 +469,21 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
         </div>
       )}
 
-      <div className={styles.componentBar}>
+      <div className={styles.deviceSelector}>
+        <select
+          value={selectedDevice.name}
+          onChange={handleDeviceChange}
+          className={styles.deviceDropdown}
+        >
+          {devicePresets.map((device) => (
+            <option key={device.name} value={device.name}>
+              {device.name} ({device.width}x{device.height})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* <div className={styles.componentBar}>
         {exampleComponents.map((component, index) => (
           <motion.button
             key={index}
@@ -456,7 +495,7 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
             {component.name}
           </motion.button>
         ))}
-      </div>
+      </div> */}
     </motion.div>
   );
 }

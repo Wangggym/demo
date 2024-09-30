@@ -87,26 +87,43 @@ export default function Home() {
 
   useEffect(() => {
     if (backgroundHtml) {
+      const iframeContainer = document.getElementById('iframe-container') || document.createElement('div');
+      iframeContainer.id = 'iframe-container';
+      iframeContainer.style.position = 'fixed';
+      iframeContainer.style.top = '0';
+      iframeContainer.style.left = '0';
+      iframeContainer.style.width = '100%';
+      iframeContainer.style.height = '100%';
+      iframeContainer.style.backgroundColor = '#f0f0f0';
+      iframeContainer.style.overflow = 'hidden'; // Add this line
+
       const iframe = document.getElementById('generated_iframe') || document.createElement('iframe');
-      iframe.id = 'generated_iframe'
-      iframe.srcdoc = backgroundHtml
-      iframe.style.position = 'fixed'
-      iframe.style.top = '0'
-      iframe.style.left = '0'
-      iframe.style.width = '100%'
-      iframe.style.height = '100%'
-      iframe.style.border = 'none'
-      iframe.style.zIndex = '-1'
-      document.body.appendChild(iframe)
+      iframe.id = 'generated_iframe';
+      iframe.srcdoc = backgroundHtml;
+      iframe.style.border = 'none';
+      iframe.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.1)';
+      iframe.style.position = 'absolute';
+      // iframe.style.top = '50%';
+      // iframe.style.left = '50%';
+      // // iframe.style.transform = 'translate(-50%, -50%)';
+      // iframe.style.width = '1280px'; // Default to Desktop size
+      // iframe.style.height = '800px';
+
+      iframeContainer.appendChild(iframe);
+      document.body.appendChild(iframeContainer);
 
       return () => {
-        document.body.removeChild(iframe)
-      }
+        document.body.removeChild(iframeContainer);
+      };
     }
-  }, [backgroundHtml])
+  }, [backgroundHtml]);
 
   const handleHtmlChange = (newHtml) => {
     setBackgroundHtml(newHtml);
+    const iframe = document.getElementById('generated_iframe');
+    if (iframe) {
+      iframe.srcdoc = newHtml;
+    }
   };
 
   return (
