@@ -35,6 +35,8 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
   const [isEvaluationCollapsed, setIsEvaluationCollapsed] = useState(false);
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [selectedDevice, setSelectedDevice] = useState(devicePresets[0]);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   useEffect(() => {
     if (initialHtml) {
@@ -224,7 +226,7 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
 
         const newHtml = iframeRef.current.contentDocument.documentElement.outerHTML;
 
-        addNewVersion(newHtml);  // 非阻塞调用
+        addNewVersion(newHtml);  // 非阻塞用
 
         // Dispatch a custom event to notify of HTML change
         window.dispatchEvent(new Event('htmlChanged'));
@@ -308,6 +310,44 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
   useEffect(() => {
     handleDeviceChange({ target: { value: 'Desktop' } });
   }, []);
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current.onend = null; // 移除原有的 onend 处理器
+      setIsListening(false); // 立即更新状态
+    }
+  };
+
+  const startListening = () => {
+    if ('webkitSpeechRecognition' in window) {
+      recognitionRef.current = new window.webkitSpeechRecognition();
+      recognitionRef.current.continuous = false;
+      recognitionRef.current.interimResults = false;
+      recognitionRef.current.lang = 'zh-CN';  
+
+      recognitionRef.current.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognitionRef.current.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        setChangeInput(transcript);
+      };
+
+      recognitionRef.current.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current.onend = () => {
+        setIsListening(false);
+      };
+
+      recognitionRef.current.start();
+    } else {
+      alert('Your browser does not support speech recognition.');
+    }
+  };
 
   return (
     <motion.div
@@ -330,15 +370,23 @@ export default function DevTools({ onHtmlChange, initialHtml }) {
       {selectedElement && (
         <div className={styles.elementInfo}>
           <p>Tag: {selectedElement.tagName}</p>
-          <input
-            ref={inputRef}
-            type="text"
-            placeholder="Describe the change..."
-            className={styles.changeInput}
-            value={changeInput}
-            onChange={(e) => setChangeInput(e.target.value)}
-            onKeyPress={handleKeyPress}
-          />
+          <div className={styles.inputContainer}>
+            <input
+              ref={inputRef}
+              type="text"
+              placeholder="Describe the change..."
+              className={styles.changeInput}
+              value={changeInput}
+              onChange={(e) => setChangeInput(e.target.value)}
+              onKeyPress={handleKeyPress}
+            />
+            <button
+              className={`${styles.voiceButton} ${isListening ? styles.listening : ''}`}
+              onClick={isListening ? stopListening : startListening}
+            >
+              {isListening ? '🛑' : '🎙️'}
+            </button>
+          </div>
         </div>
       )}
       {isLoading && (

@@ -2,14 +2,13 @@
   position: fixed;
   bottom: 20px;
   right: 20px;
-  z-index: 10000;
-  background-color: white;
-  border-radius: 8px;
+  z-index: 2147483647; /* 最高层级 */
+  background-color: #f8f9fa;
+  border-radius: 12px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-  padding: 10px;
-  max-width: 400px; /* Increased width to fit history bar */
+  padding: 15px;
+  max-width: 400px;
   width: 100%;
-  padding-bottom: 20px; /* Add some padding at the bottom */
 }
 
 .floatingBar {
@@ -21,10 +20,12 @@
 
 .inputContainer {
   display: flex;
+  align-items: center;
   background-color: white;
-  border-radius: 20px;
+  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  margin-top: 10px;
 }
 
 .input {
@@ -73,7 +74,7 @@
 }
 
 .devToolsButton {
-  background-color: #3498db;
+  background-color: #007bff;
   border: none;
   color: white;
   padding: 12px 20px;
@@ -82,15 +83,15 @@
   display: block;
   width: 100%;
   font-size: 14px;
-  margin-bottom: 10px;
+  margin-bottom: 15px;
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: 6px;
   transition: background-color 0.3s, transform 0.2s;
-  font-weight: bold;
+  font-weight: 600;
 }
 
 .devToolsButton:hover {
-  background-color: #2980b9;
+  background-color: #0056b3;
 }
 
 .overlay {
@@ -103,16 +104,17 @@
 }
 
 .elementInfo {
-  background-color: #f0f0f0;
-  padding: 8px;
-  border-radius: 5px;
+  background-color: #e9ecef;
+  padding: 12px;
+  border-radius: 8px;
   overflow: hidden;
-  font-size: 12px;
-
+  font-size: 14px;
+  margin-bottom: 15px;
 }
 
 .elementInfo p {
-  margin: 0;
+  margin: 0 0 10px 0;
+  font-weight: bold;
 }
 
 .domTree {
@@ -140,12 +142,11 @@
 }
 
 .changeInput {
-  width: 90%;
-  padding: 6px;
-  margin: 5px 0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-size: 12px;
+  flex-grow: 1;
+  border: none;
+  padding: 10px 15px;
+  font-size: 14px;
+  outline: none;
 }
 
 .changeButton {
@@ -359,4 +360,35 @@
   transition: width 0.3s, height 0.3s;
   border: 1px solid #ccc;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.voiceButton {
+  margin-left: 5px;
+  padding: 8px;
+  background-color: #f0f0f0;
+  color: #333;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-size: 18px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.voiceButton:hover {
+  background-color: #e0e0e0;
+}
+
+.voiceButton.listening {
+  background-color: #ff4d4f;
+  color: white;
+}
+
+.voiceButton.listening:hover {
+  background-color: #ff7875;
 }
